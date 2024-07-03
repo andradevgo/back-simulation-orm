@@ -1,0 +1,80 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Archivo: schema.prisma
+
+// Definición de la entidad Subjects
+model Subjects {
+  Id                Int           @id @default(autoincrement())
+  Division          Int           @default(60)
+  Name              String
+  Classroom         String?
+  Credits           Int?
+  Registration_Date DateTime      @default(now())
+  Status            String        @default("a")
+  Slots             Int?
+  Program           Programs?     @relation(fields: [Program_Id], references: [Id])
+  Program_Id        Int?
+  Enrollments       Enrollments[]
+
+  @@unique([Id, Division])
+}
+
+// Definición de la entidad Students
+model Students {
+  Id                Int           @id @default(autoincrement())
+  Name              String
+  Photo             String?       @default("https://cdn.icon-icons.com/icons2/1378/PNG/512/avatardefault_92824.png")
+  Birthdate         DateTime?
+  Document_Type     String?
+  Document_Number   String        @unique
+  Registration_Date DateTime      @default(now())
+  Status            String        @default("a")
+  Program           Programs?     @relation(fields: [Program_Id], references: [Id])
+  Program_Id        Int?
+  Enrollments       Enrollments[]
+}
+
+// Definición de la entidad Enrollments
+model Enrollments {
+  Id            Int      @id @default(autoincrement())
+  Subject_Id    Int
+  Subject_group Int      @default(60)
+  Student_Id    Int
+  Date          DateTime @default(now())
+  Status        String   @default("a")
+
+  // Relación con la tabla Subjects
+  Subjects Subjects @relation(fields: [Subject_Id, Subject_group], references: [Id, Division])
+
+  // Relación con la tabla Students
+  Students Students @relation(fields: [Student_Id], references: [Id])
+}
+
+// Definición de la entidad Faculties
+model Faculties {
+  Id       Int        @id @default(autoincrement())
+  Name     String
+  Programs Programs[] // This line adds a list of Programs related to the Faculty
+}
+
+model Programs {
+  Id        Int        @id @default(autoincrement())
+  Name      String
+  Faculty   Faculties  @relation(fields: [facultyId], references: [Id])
+  facultyId Int
+  Subjects  Subjects[]
+  Students  Students[]
+}
