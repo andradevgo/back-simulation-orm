@@ -26,7 +26,7 @@ export const createProgram = async (req, res) => {
   const newProgram = await prisma.programs.create({
     data: {
       Name: req.body.Name,
-      FacultyId: +req.body.FacultyId,
+      facultyId: +req.body.FacultyId,
     },
   });
   res.json(newProgram);
@@ -42,4 +42,8 @@ export const updateProgram = async (req, res) => {
     data: req.body,
   });
   return res.json(programUpdate);
+};
+
+export const deleteProgram = async (req, res) => {
+  return res.json({ message: 'deleteProgram' });
 };
