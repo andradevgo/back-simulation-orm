@@ -1,9 +1,17 @@
 import { prisma } from '../db.js';
+import { calculateAge } from '../utils/calculateAge.js';
 
 export const getStudents = async (req, res) => {
   try {
     const students = await prisma.students.findMany();
-    res.json(students);
+
+    const studentsAge = students.map((student) => ({
+      ...student,
+      Age: calculateAge(student.Birthdate),
+      Birthdate: undefined,
+    }));
+
+    return res.status(200).json(studentsAge);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
