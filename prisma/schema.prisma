@@ -28,6 +28,7 @@ model Subjects {
   Program           Programs?     @relation(fields: [Program_Id], references: [Id])
   Program_Id        Int?
   Enrollments       Enrollments[]
+  OriginalSubjectId Int?
 
   @@unique([Id, Division])
 }
