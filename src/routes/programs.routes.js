@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { prisma } from '../db.js';
 import {
   createProgram,
+  deleteProgram,
   getProgram,
   getPrograms,
   updateProgram,
@@ -16,5 +17,7 @@ router.get('/programs/:id', getProgram);
 router.put('/programs/:id', updateProgram);
 
 router.post('/programs', createProgram);
+
+router.delete('/programs', deleteProgram);
 
 export default router;
