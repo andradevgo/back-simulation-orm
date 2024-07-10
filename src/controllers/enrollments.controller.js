@@ -43,6 +43,21 @@ export const createEnrollment = async (req, res) => {
         Id: +Subject_Id,
       },
     });
+    const getStudent = await prisma.students.findFirst({
+      where: {
+        Id: +Student_Id,
+      },
+    });
+    console.log(
+      getSubjectEnrollment.Program_Id + 'Programad ID:' + getStudent.Program_Id
+    );
+
+    if (getSubjectEnrollment.Program_Id !== getStudent.Program_Id) {
+      return res
+        .status(400)
+        .json({ message: 'No puedes inscribirte en esta materia' });
+    }
+
     const subjectsSameId = await prisma.subjects.findMany({
       where: {
         OR: [
