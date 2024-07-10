@@ -69,3 +69,17 @@ export const getStudentsBySubject = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
+export const getSubjectsByProgram = async (req, res) => {
+  const { program_id } = req.params;
+  try {
+    const subjects = await prisma.subjects.findMany({
+      where: {
+        Program_Id: +program_id,
+      },
+    });
+    res.json(subjects);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
