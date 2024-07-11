@@ -4,11 +4,13 @@ import programsRoutes from './routes/programs.routes.js';
 import studentsRoutes from './routes/students.routes.js';
 import subjectsRoutes from './routes/subjects.routes.js';
 import facultiesRoutes from './routes/faculties.routes.js';
+import cors from 'cors';
 
 const app = express();
 
 app.use(express.json());
 
+app.use(cors());
 app.use('/api', facultiesRoutes);
 app.use('/api', programsRoutes);
 app.use('/api', studentsRoutes);
