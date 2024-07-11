@@ -30,6 +30,25 @@ export const getStudent = async (req, res) => {
   }
 };
 
+export const getStudentSubjects = async (req, res) => {
+  const { id } = req.params;
+  try {
+    const studentSubjects = await prisma.enrollments.findMany({
+      where: {
+        Student_Id: +id,
+      },
+      include: {
+        Subjects: true,
+      },
+    });
+    return res
+      .status(200)
+      .json(studentSubjects.map((student) => student.Subjects));
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 export const createStudent = async (req, res) => {
   try {
     const { Name, Birthdate, Document_Type, Document_Number, Program_Id } =
