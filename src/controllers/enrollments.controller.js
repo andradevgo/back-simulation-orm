@@ -8,7 +8,16 @@ export const getEnrollments = async (req, res) => {
         Subjects: true,
       },
     });
-    res.json(enrollments);
+    console.log(enrollments);
+
+    const response = enrollments.map((enrollment) => ({
+      id: enrollment.Id,
+      subject_name: enrollment.Subjects.Name,
+      student_name: enrollment.Students.Name,
+      division: enrollment.Subject_group,
+      enrollment_date: enrollment.Date,
+    }));
+    res.json(response);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -124,16 +133,20 @@ export const createEnrollment = async (req, res) => {
       });
       return res.status(200).json(newEnrollment);
     } else if (!gotSlots && subjectsSameId.length < 4) {
+      let group = getSubjectEnrollment.Division;
+      let newGroup = subjectsSameId.length == 1 ? group + 1 : group + 2;
       const newSubject = await prisma.subjects.create({
         data: {
           ...getSubjectEnrollment,
           Id: undefined,
+          Division: +newGroup,
           OriginalSubjectId: +Subject_Id,
         },
       });
       const firstEnrollmentNew = await prisma.enrollments.create({
         data: {
           Subject_Id: newSubject.Id,
+          Subject_group: +newSubject.Division,
           Student_Id: +Student_Id,
         },
       });
