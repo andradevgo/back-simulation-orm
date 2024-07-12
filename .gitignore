@@ -6,3 +6,4 @@ node_modules/
 
 # Carpeta de Docker
 docker-database/
+docker-database-test/
