@@ -14,6 +14,56 @@ datasource db {
 }
 
 // Archivo: schema.prisma
+model Users {
+  Id                Int       @id @default(autoincrement())
+  Name              String
+  Email             String
+  Password          String
+  Photo             String?   @default("https://cdn.icon-icons.com/icons2/1378/PNG/512/avatardefault_92824.png")
+  Birthdate         DateTime?
+  Document_Type     String?
+  Document_Number   String    @unique
+  Registration_Date DateTime  @default(now())
+
+  // Add the opposite relation field
+  User_Roles User_Roles[]
+  Students   Students[]
+
+  @@unique([Email])
+}
+
+//Definición de la entidad Roles
+model Roles {
+  Id                Int      @id @default(autoincrement())
+  Name              String
+  Registration_Date DateTime @default(now())
+
+  // Add the opposite relation field
+  User_Roles User_Roles[]
+}
+
+model User_Roles {
+  Id                Int      @id @default(autoincrement())
+  User              Users    @relation(fields: [User_Id], references: [Id], onDelete: Cascade)
+  User_Id           Int
+  Role              Roles    @relation(fields: [Role_Id], references: [Id])
+  Role_Id           Int
+  Registration_Date DateTime @default(now())
+}
+
+// Definición de la entidad Students
+
+model Students {
+  Id          Int           @id @default(autoincrement())
+  Status      String        @default("a")
+  User        Users         @relation(fields: [User_Id], references: [Id], onDelete: Cascade)
+  User_Id     Int
+  Program     Programs?     @relation(fields: [Program_Id], references: [Id])
+  Program_Id  Int?
+  Enrollments Enrollments[]
+
+  @@unique([User_Id])
+}
 
 // Definición de la entidad Subjects
 model Subjects {
@@ -33,21 +83,6 @@ model Subjects {
   @@unique([Id, Division])
 }
 
-// Definición de la entidad Students
-model Students {
-  Id                Int           @id @default(autoincrement())
-  Name              String
-  Photo             String?       @default("https://cdn.icon-icons.com/icons2/1378/PNG/512/avatardefault_92824.png")
-  Birthdate         DateTime?
-  Document_Type     String?
-  Document_Number   String        @unique
-  Registration_Date DateTime      @default(now())
-  Status            String        @default("a")
-  Program           Programs?     @relation(fields: [Program_Id], references: [Id])
-  Program_Id        Int?
-  Enrollments       Enrollments[]
-}
-
 // Definición de la entidad Enrollments
 model Enrollments {
   Id            Int      @id @default(autoincrement())
@@ -61,7 +96,7 @@ model Enrollments {
   Subjects Subjects @relation(fields: [Subject_Id, Subject_group], references: [Id, Division])
 
   // Relación con la tabla Students
-  Students Students @relation(fields: [Student_Id], references: [Id])
+  Students Students @relation(fields: [Student_Id], references: [Id], onDelete: Cascade)
 }
 
 // Definición de la entidad Faculties
