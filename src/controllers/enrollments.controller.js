@@ -1,4 +1,5 @@
 import { prisma } from '../db.js';
+import jwt from 'jsonwebtoken';
 
 export const getEnrollments = async (req, res) => {
   try {
@@ -45,16 +46,33 @@ export const getEnrollment = async (req, res) => {
 };
 
 export const createEnrollment = async (req, res) => {
-  const { Subject_Id, Student_Id } = req.body;
+  const { Subject_Id } = req.body;
   try {
+    const token = req.cookies.access_token;
+
+    if (!token) {
+      return res.status(401).json({ message: 'Unauthorized' });
+    }
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET_KEY);
+
+    const user = await prisma.users.findFirst({
+      where: {
+        Id: decoded.id,
+      },
+    });
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    const getStudent = await prisma.students.findFirst({
+      where: {
+        User_Id: +user.Id,
+      },
+    });
     const getSubjectEnrollment = await prisma.subjects.findFirst({
       where: {
         Id: +Subject_Id,
-      },
-    });
-    const getStudent = await prisma.students.findFirst({
-      where: {
-        Id: +Student_Id,
       },
     });
     console.log(
@@ -84,7 +102,7 @@ export const createEnrollment = async (req, res) => {
     const studentsEnrolled = await prisma.enrollments.findMany({
       where: {
         AND: [
-          { Student_Id: +Student_Id },
+          { Student_Id: +getStudent.Id },
           {
             OR: [
               { Subject_Id: +Subject_Id },
@@ -128,7 +146,7 @@ export const createEnrollment = async (req, res) => {
       const newEnrollment = await prisma.enrollments.create({
         data: {
           Subject_Id: subjectWithSlots,
-          Student_Id: +Student_Id,
+          Student_Id: +getStudent.Id,
         },
       });
       return res.status(200).json(newEnrollment);
@@ -147,7 +165,7 @@ export const createEnrollment = async (req, res) => {
         data: {
           Subject_Id: newSubject.Id,
           Subject_group: +newSubject.Division,
-          Student_Id: +Student_Id,
+          Student_Id: +getStudent.Id,
         },
       });
       return res.status(200).json(firstEnrollmentNew);
@@ -164,5 +182,59 @@ export const updateEnrollment = async (req, res) => {
 };
 
 export const deleteEnrollment = async (req, res) => {
-  await res.json({ message: 'deleteEnrollment' });
+  const { id } = req.params;
+  try {
+    const enrollment = await prisma.enrollments.delete({
+      where: {
+        Id: +id,
+      },
+    });
+    res.json(enrollment);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+export const getEnrollmentsStudent = async (req, res) => {
+  try {
+    const token = req.cookies.access_token;
+
+    if (!token) {
+      return res.status(401).json({ message: 'Unauthorized' });
+    }
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET_KEY);
+
+    console.log({ decoded });
+
+    const user = await prisma.users.findFirst({
+      where: {
+        Id: decoded.id,
+      },
+    });
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    const student = await prisma.students.findFirst({
+      where: {
+        User_Id: +user.Id,
+      },
+    });
+
+    if (!student) {
+      return res.status(404).json({ message: 'Student not found' });
+    }
+
+    const enrollments = await prisma.enrollments.findMany({
+      where: {
+        Student_Id: +student.Id,
+      },
+    });
+
+    res.json(enrollments);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
 };
