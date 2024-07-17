@@ -47,3 +47,20 @@ export const updateProgram = async (req, res) => {
 export const deleteProgram = async (req, res) => {
   return res.json({ message: 'deleteProgram' });
 };
+
+export const getProgramByStudent = async (req, res) => {
+  const { id } = req.params;
+  try {
+    const program = await prisma.students.findFirst({
+      where: {
+        Id: +id,
+      },
+      select: {
+        Program: true,
+      },
+    });
+    return res.status(200).json(program);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
