@@ -1,9 +1,9 @@
 import { Router } from 'express';
-import { prisma } from '../db.js';
 import {
   createProgram,
   deleteProgram,
   getProgram,
+  getProgramByStudent,
   getPrograms,
   updateProgram,
 } from '../controllers/programs.controller.js';
@@ -13,6 +13,8 @@ const router = Router();
 router.get('/programs', getPrograms);
 
 router.get('/programs/:id', getProgram);
+
+router.get('/program/student/:id', getProgramByStudent);
 
 router.put('/programs/:id', updateProgram);
 
