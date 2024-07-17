@@ -7,10 +7,14 @@ export const getFaculties = async (req, res) => {
 
 export const createFaculty = async (req, res) => {
   const { Name } = req.body;
-  const newFaculty = await prisma.faculties.create({
-    data: {
-      Name,
-    },
-  });
-  res.json(newFaculty);
+  try {
+    const newFaculty = await prisma.faculties.create({
+      data: {
+        Name,
+      },
+    });
+    res.json(newFaculty);
+  } catch (error) {
+    return res.status(400).json({ message: error.message });
+  }
 };
