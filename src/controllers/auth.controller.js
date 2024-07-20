@@ -1,6 +1,7 @@
-import { join } from 'path';
+
 import axios from 'axios';
 import fs from 'fs';
+import path from 'path';
 import bcryptjs from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { compareFaces } from '../utils/faceService.js';
@@ -147,19 +148,17 @@ async function downloadImage(url, filePath) {
 export const signin = async (req, res) => {
   const { Email, Password, Photo } = req.body;
 
-  // Validación de entrada
   if (!Email || (!Password && !Photo) || Email === '' || (Password === '' && !Photo)) {
       return res.status(400).json({ message: 'Email and either Password or Photo are required' });
   }
 
   try {
-      // Buscar usuario por email
       const user = await prisma.users.findFirst({
           where: { Email },
           select: {
               Id: true,
               Password: true,
-              Photo: true,
+              Photo: true,  // Usar el campo 'Photo'
           },
       });
 
@@ -170,6 +169,7 @@ export const signin = async (req, res) => {
       // Autenticación por contraseña
       if (Password) {
           const validPassword = bcryptjs.compareSync(Password, user.Password);
+
           if (!validPassword) {
               return res.status(400).json({ message: 'Invalid credentials' });
           }
@@ -177,16 +177,18 @@ export const signin = async (req, res) => {
 
       // Autenticación por foto
       if (Photo) {
-          const storedImagePath = join('temp', 'storedImage.jpg');
-          const receivedImagePath = join('temp', 'receivedImage.jpg');
+
+        const storedImagePath = path.join(__dirname, '../temp/storedImage.jpg');
+
 
           // Obtener la imagen almacenada
           const storedImage = user.Photo;
 
-          // Descargar o guardar la imagen almacenada
-          if (storedImage.startsWith('http')) {
+        /*   if (storedImage.startsWith('http')) {
+              // Si es una URL, descargar la imagen
               await downloadImage(storedImage, storedImagePath);
           } else {
+              // Si es base64, decodificar y guardar la imagen
               const buffer = Buffer.from(storedImage, 'base64');
               fs.writeFileSync(storedImagePath, buffer);
           }
@@ -202,14 +204,10 @@ export const signin = async (req, res) => {
           } catch (error) {
               return res.status(400).json({ message: error.message });
           } finally {
-              // Asegurarse de que se eliminen los archivos temporales
-              try {
-                  fs.unlinkSync(storedImagePath);
-                  fs.unlinkSync(receivedImagePath);
-              } catch (err) {
-                  console.error('Error deleting temporary files:', err);
-              }
-          }
+              // Eliminar archivos temporales
+              fs.unlinkSync(storedImagePath);
+              fs.unlinkSync(receivedImagePath);
+          } */
       }
 
       // Consulta de rol del usuario
