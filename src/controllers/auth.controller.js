@@ -216,7 +216,7 @@ export const signin = async (req, res) => {
         console.log(isSamePerson);
       } catch (error) {
         console.log(error);
-        //return res.status(400).json({ error: error.message });
+         res.status(400).json({ error: error.message });
       }
     }
 
