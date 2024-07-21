@@ -2,8 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import canvas from 'canvas';
 import { loadModels } from '../models/loadModels.js';
-import faceapi from 'face-api.js';
-
+import * as faceapi from 'face-api.js';
 
 async function getFaceDescriptor(image) {
     const img = await canvas.loadImage(image);
@@ -15,10 +14,9 @@ function compareDescriptors(descriptor1, descriptor2) {
     const distance = faceapi.euclideanDistance(descriptor1, descriptor2);
     console.log(distance);
     return distance < 0.6; 
-  
 }
 
-async function compareFaces(storedImagePath, receivedImagePath) {
+export async function compareFaces(storedImagePath, receivedImagePath) {
     await loadModels();
 
     const descriptor1 = await getFaceDescriptor(storedImagePath);
@@ -30,5 +28,4 @@ async function compareFaces(storedImagePath, receivedImagePath) {
         throw new Error('No se detectaron rostros en una o ambas imágenes.');
     }
 }
-
-export { compareFaces };
+ 
