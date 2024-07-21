@@ -6,6 +6,7 @@ import bcryptjs from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { compareFaces } from '../utils/faceService.js';
 import { prisma } from '../db.js';
+import { match } from 'assert';
 
 // Registrar un nuevo usuario
 export const signup = async (req, res, next) => {
@@ -211,9 +212,11 @@ export const signin = async (req, res) => {
         // Elimina archivos temporales después de la comparación
         fs.unlinkSync(storedImagePath);
         fs.unlinkSync(receivedImagePath);
-        return res.json({ match: isSamePerson });
+        //return res.json({ match: isSamePerson });
+        console.log(isSamePerson);
       } catch (error) {
-        return res.status(400).json({ error: error.message });
+        console.log(error);
+        //return res.status(400).json({ error: error.message });
       }
     }
 
