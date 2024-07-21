@@ -162,15 +162,49 @@ export const signin = async (req, res) => {
       return res.status(404).json({ message: 'User not found' });
     }
 
-    let validPassword = true;
-
     if (Password) {
-      validPassword = bcryptjs.compareSync(Password, user.Password);
+      // Validar contraseña
+      const validPassword = bcryptjs.compareSync(Password, user.Password);
       if (!validPassword) {
         return res.status(400).json({ message: 'Invalid password' });
       }
+
+      // Consulta de rol del usuario
+      const userRole = await prisma.user_Roles.findFirst({
+        where: {
+          User_Id: user.Id,
+        },
+        select: {
+          Role: true,
+        },
+      });
+
+      // Extraer el rol del usuario
+      const role = userRole ? userRole.Role : null;
+      if (!userRole || role === null) {
+        return res.status(400).json({ message: 'User has no role' });
+      }
+
+      // Generar token con el rol
+      const token = jwt.sign(
+        { id: user.Id, role: role.Id },
+        process.env.JWT_SECRET_KEY,
+        {
+          expiresIn: '1d',
+        }
+      );
+
+      const { Password: userPassword, ...userData } = user;
+
+      return res
+        .status(200)
+        .cookie('access_token', token, {
+          httpOnly: true,
+        })
+        .json(userData);
     }
 
+    // Si no se proporciona contraseña, realizar validación de foto
     if (Photo) {
       const tempDir = path.join(path.resolve(), 'temp');
       const receivedImagePath = path.join(tempDir, 'receivedImage.jpg');
@@ -221,6 +255,8 @@ export const signin = async (req, res) => {
         fs.unlinkSync(receivedImagePath);
         return res.status(400).json({ error: error.message });
       }
+    } else {
+      return res.status(400).json({ message: 'Password or Photo is required' });
     }
 
     // Consulta de rol del usuario
@@ -234,7 +270,7 @@ export const signin = async (req, res) => {
     });
 
     // Extraer el rol del usuario
-    const role = userRole ? userRole.Role : null; // Cambia 'defaultRole' por el rol por defecto si no tiene asignado uno
+    const role = userRole ? userRole.Role : null;
     if (!userRole || role === null) {
       return res.status(400).json({ message: 'User has no role' });
     }
