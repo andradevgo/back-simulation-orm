@@ -148,11 +148,12 @@ async function downloadImage(url, filePath) {
 
 export const signin = async (req, res) => {
   const { Email, Password, Photo } = req.body;
-  try {
-    if (!Email || (!Password && !Photo) || Email === '' || Password === '') {
-      return res.status(400).json({ message: 'Email and either Password or Photo are required' });
-    }
 
+  if (!Email || (!Password && !Photo) || Email === '') {
+    return res.status(400).json({ message: 'Email and either Password or Photo are required' });
+  }
+
+  try {
     const user = await prisma.users.findFirst({
       where: { Email },
     });
@@ -161,40 +162,43 @@ export const signin = async (req, res) => {
       return res.status(404).json({ message: 'User not found' });
     }
 
-    const validPassword = bcryptjs.compareSync(Password, user.Password);
+    let validPassword = true;
 
-    if (!validPassword) {
-      return res.status(400).json({ message: 'Invalid credentials' });
+    if (Password) {
+      validPassword = bcryptjs.compareSync(Password, user.Password);
+      if (!validPassword) {
+        return res.status(400).json({ message: 'Invalid password' });
+      }
     }
-    
-    const tempDir = path.join(path.resolve(), 'temp');
-    const receivedImagePath = path.join(tempDir, 'receivedImage.jpg');
-    const storedImagePath = path.join(tempDir, 'storedImage.jpg');
-    
-    // Helper function to write image
-    const writeImage = (filePath, base64Data) => {
-      return new Promise((resolve, reject) => {
-        fs.writeFile(filePath, base64Data, 'base64', (err) => {
-          if (err) {
-            reject(err);
-          } else {
-            resolve();
-          }
-        });
-      });
-    };
 
     if (Photo) {
-      const base64StringReceived = Photo;
-      const base64DataReceived = base64StringReceived.replace(/^data:image\/png;base64,/, '');
-
-      const base64StringStored = user.Photo;
-      const base64DataStored = base64StringStored.replace(/^data:image\/png;base64,/, '');
+      const tempDir = path.join(path.resolve(), 'temp');
+      const receivedImagePath = path.join(tempDir, 'receivedImage.jpg');
+      const storedImagePath = path.join(tempDir, 'storedImage.jpg');
+      
+      // Helper function to write image
+      const writeImage = (filePath, base64Data) => {
+        return new Promise((resolve, reject) => {
+          fs.writeFile(filePath, base64Data, 'base64', (err) => {
+            if (err) {
+              reject(err);
+            } else {
+              resolve();
+            }
+          });
+        });
+      };
 
       // Verifica si el directorio 'temp' existe, si no, lo crea
       if (!fs.existsSync(tempDir)) {
         fs.mkdirSync(tempDir, { recursive: true });
       }
+
+      const base64StringReceived = Photo;
+      const base64DataReceived = base64StringReceived.replace(/^data:image\/png;base64,/, '');
+
+      const base64StringStored = user.Photo;
+      const base64DataStored = base64StringStored.replace(/^data:image\/png;base64,/, '');
 
       // Guarda las imágenes
       await Promise.all([
@@ -202,26 +206,22 @@ export const signin = async (req, res) => {
         writeImage(receivedImagePath, base64DataReceived),
       ]);
 
-      console.log('Imagen guardada correctamente en', storedImagePath);
-      console.log('Imagen recibida guardada correctamente en', receivedImagePath);
-
       try {
-        console.log("entra");
         const isSamePerson = await compareFaces(storedImagePath, receivedImagePath);
-        console.log("sale");
+
         // Elimina archivos temporales después de la comparación
         fs.unlinkSync(storedImagePath);
         fs.unlinkSync(receivedImagePath);
-        //return res.json({ match: isSamePerson });
-        console.log(isSamePerson);
+
+        if (!isSamePerson) {
+          return res.status(400).json({ message: 'Photo does not match' });
+        }
       } catch (error) {
-        console.log(error);
-         res.status(400).json({ error: error.message });
+        fs.unlinkSync(storedImagePath);
+        fs.unlinkSync(receivedImagePath);
+        return res.status(400).json({ error: error.message });
       }
     }
-
-    
-
 
     // Consulta de rol del usuario
     const userRole = await prisma.user_Roles.findFirst({
@@ -238,6 +238,7 @@ export const signin = async (req, res) => {
     if (!userRole || role === null) {
       return res.status(400).json({ message: 'User has no role' });
     }
+
     // Generar token con el rol
     const token = jwt.sign(
       { id: user.Id, role: role.Id },
