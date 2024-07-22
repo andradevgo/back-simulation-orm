@@ -285,7 +285,7 @@ export const signin = async (req, res) => {
     );
 
     const { Password: userPassword, ...userData } = user;
-
+console.log(token);
     return res
       .status(200)
       .cookie('access_token', token, {
