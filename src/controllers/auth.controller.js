@@ -173,19 +173,19 @@ export const verifyToken = async (req, res) => {
       return res.status(400).json({ message: 'User has no role' });
     }
 
-    // const newToken = jwt.sign(
-    //   { id: user.Id, role },
-    //   process.env.JWT_SECRET_KEY,
-    //   {
-    //     expiresIn: '1d',
-    //   }
-    // );
+    const newToken = jwt.sign(
+      { id: user.Id, role },
+      process.env.JWT_SECRET_KEY,
+      {
+        expiresIn: '1d',
+      }
+    );
 
     const { password: userPassword, ...userData } = user;
 
     return res
       .status(200)
-      .cookie('access_token', token, { httpOnly: true })
+      .cookie('access_token', newToken, { httpOnly: true })
       .json(userData);
   } catch (error) {
     res.clearCookie('access_token');
