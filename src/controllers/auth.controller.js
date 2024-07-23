@@ -68,6 +68,7 @@ export const signup = async (req, res, next) => {
       .status(201)
       .cookie('access_token', token, {
         httpOnly: true,
+        sameSite: 'None',
       })
       .json(user);
   } catch (error) {
@@ -130,6 +131,7 @@ export const signin = async (req, res) => {
       .status(200)
       .cookie('access_token', token, {
         httpOnly: true,
+        sameSite: 'None',
       })
       .json(userData);
   } catch (error) {
@@ -185,7 +187,11 @@ export const verifyToken = async (req, res) => {
 
     return res
       .status(200)
-      .cookie('access_token', newToken, { httpOnly: true })
+      .cookie('access_token', newToken, {
+        httpOnly: true,
+        secure: true, // Solo si estás en HTTPS
+        sameSite: 'None',
+      })
       .json(userData);
   } catch (error) {
     res.clearCookie('access_token');
