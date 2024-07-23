@@ -68,6 +68,7 @@ export const signup = async (req, res, next) => {
       .status(201)
       .cookie('access_token', token, {
         httpOnly: true,
+        secure: true, // Solo si estás en HTTPS
         sameSite: 'None',
       })
       .json(user);
@@ -131,6 +132,7 @@ export const signin = async (req, res) => {
       .status(200)
       .cookie('access_token', token, {
         httpOnly: true,
+        secure: true, // Solo si estás en HTTPS
         sameSite: 'None',
       })
       .json(userData);
