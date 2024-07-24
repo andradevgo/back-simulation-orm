@@ -14,8 +14,10 @@ const app = express();
 
 app.use(express.json({ limit: '50mb' }));
 
+const PORT = process.env.PORT || 3000;
+
 const corsOptions = {
-  origin: 'http://localhost:5173', // Ajusta esto a la URL de tu frontend
+  origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
   credentials: true,
 };
 
@@ -33,6 +35,6 @@ app.use('/api', enrollmentsRoutes);
 app.use('/api', enrollmentsRoutes);
 app.use('/api', rolesRoutes);
 
-app.listen(3000, () => {
-  console.log('Server on port', 3000);
+app.listen(PORT, () => {
+  console.log(`Server on port ${PORT}`);
 });
