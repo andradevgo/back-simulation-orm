@@ -168,44 +168,8 @@ export const signin = async (req, res) => {
       if (!validPassword) {
         return res.status(400).json({ message: 'Invalid password' });
       }
-
-      // Consulta de rol del usuario
-      const userRole = await prisma.user_Roles.findFirst({
-        where: {
-          User_Id: user.Id,
-        },
-        select: {
-          Role: true,
-        },
-      });
-
-      // Extraer el rol del usuario
-      const role = userRole ? userRole.Role : null;
-      if (!userRole || role === null) {
-        return res.status(400).json({ message: 'User has no role' });
-      }
-
-      // Generar token con el rol
-      const token = jwt.sign(
-        { id: user.Id, role: role.Id },
-        process.env.JWT_SECRET_KEY,
-        {
-          expiresIn: '1d',
-        }
-      );
-
-      const { Password: userPassword, ...userData } = user;
-
-      return res
-        .status(200)
-        .cookie('access_token', token, {
-          httpOnly: true,
-        })
-        .json(userData);
-    }
-
-    // Si no se proporciona contraseña, realizar validación de foto
-    if (Photo) {
+    } else if (Photo) {
+      // Validación de foto
       const tempDir = path.join(path.resolve(), 'temp');
       const receivedImagePath = path.join(tempDir, 'receivedImage.jpg');
       const storedImagePath = path.join(tempDir, 'storedImage.jpg');
@@ -285,7 +249,7 @@ export const signin = async (req, res) => {
     );
 
     const { Password: userPassword, ...userData } = user;
-console.log(token);
+
     return res
       .status(200)
       .cookie('access_token', token, {
