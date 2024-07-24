@@ -1,10 +1,14 @@
+
+import axios from 'axios';
+import fs from 'fs';
+import path from 'path';
 import bcryptjs from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-
+import { compareFaces } from '../utils/faceService.js';
 import { prisma } from '../db.js';
+import { match } from 'assert';
 
-// Register a new user
-
+// Registrar un nuevo usuario
 export const signup = async (req, res, next) => {
   const { Name, Email, Password, Birthdate, Document_Type, Document_Number } =
     req.body;
@@ -54,6 +58,7 @@ export const signup = async (req, res, next) => {
         Role_Id: 2,
       },
     });
+
     const { Password: userPassword, ...user } = createUser;
 
     const token = jwt.sign(
@@ -77,70 +82,7 @@ export const signup = async (req, res, next) => {
   }
 };
 
-// Login user
-
-export const signin = async (req, res) => {
-  const { Email, Password } = req.body;
-  try {
-    if (!Email || !Password || Email === '' || Password === '') {
-      return res.status(400).json({ message: 'All fields are required' });
-    }
-
-    const user = await prisma.users.findFirst({
-      where: {
-        Email,
-      },
-    });
-
-    if (!user) {
-      return res.status(404).json({ message: 'User not found' });
-    }
-
-    const validPassword = bcryptjs.compareSync(Password, user.Password);
-
-    if (!validPassword) {
-      return res.status(400).json({ message: 'Invalid credentials' });
-    }
-
-    // Consulta de rol del usuario
-    const userRole = await prisma.user_Roles.findFirst({
-      where: {
-        User_Id: user.Id,
-      },
-      select: {
-        Role: true,
-      },
-    });
-
-    // Extraer el rol del usuario
-    const role = userRole ? userRole.Role : null; // Cambia 'defaultRole' por el rol por defecto si no tiene asignado uno
-    if (!userRole || role === null) {
-      return res.status(400).json({ message: 'User has no role' });
-    }
-    // Generar token con el rol
-    const token = jwt.sign(
-      { id: user.Id, role: role.Id },
-      process.env.JWT_SECRET_KEY,
-      {
-        expiresIn: '1d',
-      }
-    );
-
-    const { Password: userPassword, ...userData } = user;
-
-    return res
-      .status(200)
-      .cookie('access_token', token, {
-        httpOnly: true,
-        secure: true, // Solo si estás en HTTPS
-        sameSite: 'None',
-      })
-      .json(userData);
-  } catch (error) {
-    return res.status(500).json({ message: error.message });
-  }
-};
-
+// Verificar token
 export const verifyToken = async (req, res) => {
   try {
     const token = req.cookies.access_token;
@@ -170,8 +112,7 @@ export const verifyToken = async (req, res) => {
       },
     });
 
-    // Extraer el rol del usuario
-    const role = userRole ? userRole.Role.Id : null; // Cambia 'defaultRole' por el rol por defecto si no tiene asignado uno
+    const role = userRole ? userRole.Role.Id : null;
 
     if (!userRole || role === null) {
       return res.status(400).json({ message: 'User has no role' });
@@ -185,7 +126,7 @@ export const verifyToken = async (req, res) => {
       }
     );
 
-    const { password: userPassword, ...userData } = user;
+    const { Password: userPassword, ...userData } = user;
 
     return res
       .status(200)
@@ -195,8 +136,133 @@ export const verifyToken = async (req, res) => {
         sameSite: 'None',
       })
       .json(userData);
+
   } catch (error) {
     res.clearCookie('access_token');
+    return res.status(500).json({ message: error.message });
+  }
+};
+
+// Iniciar sesión de usuario
+async function downloadImage(url, filePath) {
+  const response = await axios({
+    url,
+    responseType: 'arraybuffer',
+  });
+  fs.writeFileSync(filePath, response.data);
+}
+
+export const signin = async (req, res) => {
+  const { Email, Password, Photo } = req.body;
+
+  if (!Email || (!Password && !Photo) || Email === '') {
+    return res.status(400).json({ message: 'Email and either Password or Photo are required' });
+  }
+
+  try {
+    const user = await prisma.users.findFirst({
+      where: { Email },
+    });
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    if (Password) {
+      // Validar contraseña
+      const validPassword = bcryptjs.compareSync(Password, user.Password);
+      if (!validPassword) {
+        return res.status(400).json({ message: 'Invalid password' });
+      }
+    } else if (Photo) {
+      // Validación de foto
+      const tempDir = path.join(path.resolve(), 'temp');
+      const receivedImagePath = path.join(tempDir, 'receivedImage.jpg');
+      const storedImagePath = path.join(tempDir, 'storedImage.jpg');
+
+      // Helper function to write image
+      const writeImage = (filePath, base64Data) => {
+        return new Promise((resolve, reject) => {
+          fs.writeFile(filePath, base64Data, 'base64', (err) => {
+            if (err) {
+              reject(err);
+            } else {
+              resolve();
+            }
+          });
+        });
+      };
+
+      // Verifica si el directorio 'temp' existe, si no, lo crea
+      if (!fs.existsSync(tempDir)) {
+        fs.mkdirSync(tempDir, { recursive: true });
+      }
+
+      const base64StringReceived = Photo;
+      const base64DataReceived = base64StringReceived.replace(/^data:image\/png;base64,/, '');
+
+      const base64StringStored = user.Photo;
+      const base64DataStored = base64StringStored.replace(/^data:image\/png;base64,/, '');
+
+      // Guarda las imágenes
+      await Promise.all([
+        writeImage(storedImagePath, base64DataStored),
+        writeImage(receivedImagePath, base64DataReceived),
+      ]);
+
+      try {
+        const isSamePerson = await compareFaces(storedImagePath, receivedImagePath);
+
+        // Elimina archivos temporales después de la comparación
+        fs.unlinkSync(storedImagePath);
+        fs.unlinkSync(receivedImagePath);
+
+        if (!isSamePerson) {
+          return res.status(400).json({ message: 'Photo does not match' });
+        }
+      } catch (error) {
+        fs.unlinkSync(storedImagePath);
+        fs.unlinkSync(receivedImagePath);
+        return res.status(400).json({ error: error.message });
+      }
+    } else {
+      return res.status(400).json({ message: 'Password or Photo is required' });
+    }
+
+    // Consulta de rol del usuario
+    const userRole = await prisma.user_Roles.findFirst({
+      where: {
+        User_Id: user.Id,
+      },
+      select: {
+        Role: true,
+      },
+    });
+
+    // Extraer el rol del usuario
+    const role = userRole ? userRole.Role : null;
+    if (!userRole || role === null) {
+      return res.status(400).json({ message: 'User has no role' });
+    }
+
+    // Generar token con el rol
+    const token = jwt.sign(
+      { id: user.Id, role: role.Id },
+      process.env.JWT_SECRET_KEY,
+      {
+        expiresIn: '1d',
+      }
+    );
+
+    const { Password: userPassword, ...userData } = user;
+
+    return res
+      .status(200)
+      .cookie('access_token', token, {
+        httpOnly: true,
+      })
+      .json(userData);
+  } catch (error) {
     return res.status(500).json({ message: error.message });
   }
 };
